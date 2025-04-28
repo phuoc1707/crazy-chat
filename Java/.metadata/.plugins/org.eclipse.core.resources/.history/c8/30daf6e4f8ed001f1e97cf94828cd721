@@ -1,0 +1,28 @@
+package com.test;
+
+public class Test {
+
+	public static void main(String[] args) {
+		int a[] = {3,6,8,10,39};
+		
+		System.out.println(search(a, 0, a.length, 6));
+
+	}
+	
+	public static int search(int[] a, int i, int lenght, int key) {
+		
+		if(lenght >= i) {
+			int mid = i+ (lenght - i) /2;
+			if(a[mid] == key)
+				return mid;
+			if(a[mid] > key )
+				return search(a, i, mid -1 , key);
+			else 
+				return search(a, mid + 1, lenght, key);
+						
+		}
+		
+		return -1;
+	} 
+
+}
