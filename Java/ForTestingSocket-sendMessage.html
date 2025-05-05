@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Realtime Chat Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+    <h2>Realtime Chat Test</h2>
+
+    <input type="text" id="messageInput" placeholder="Enter your message" />
+    <button onclick="sendMessage()">Send</button>
+
+    <ul id="messageList"></ul>
+
+    <script>
+        const token = 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZHBodW9jIiwiaWF0IjoxNzQ2MjQ0OTM4LCJleHAiOjE3NDYzMzEzMzh9.8qD-OJ1TNFuMIa9N_Viv7SRbLVRFPmiQFiIAHFKPwI0';
+
+        const conversationId = '3'; // Thay bằng conversationId thật
+        const senderId = 2;
+
+        let stompClient = null;
+
+        function connect() {
+            const socket = new SockJS('http://localhost:8081/ws-chat');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function (frame) {
+                console.log('Connected: ' + frame);
+
+                stompClient.subscribe(`/topic/conversation/${conversationId}`, function (messageOutput) {
+                    const message = JSON.parse(messageOutput.body);
+                    displayMessage(message);
+                });
+            });
+        }
+
+        function sendMessage() {
+            const content = document.getElementById("messageInput").value;
+
+            const message = {
+                conversationId: conversationId,
+                message: content,
+                sender: senderId,
+                urls: [
+                    "https://example.com/image1.jpg",
+                    "https://example.com/image2.jpg"
+                ]
+            };
+
+            stompClient.send("/app/chat.sendMessage", {
+                Authorization: token
+            }, JSON.stringify(message));
+        }
+
+        function displayMessage(message) {
+            const messageList = document.getElementById("messageList");
+
+            const li = document.createElement("li");
+            li.innerHTML = `
+                <strong>Sender:</strong> ${message.sender}<br/>
+                <strong>Message:</strong> ${message.message}<br/>
+                <strong>URLs:</strong><br/>
+                <ul>
+                    ${message.urls?.map(url => `<li><a href="${url}" target="_blank">${url}</a></li>`).join("")}
+                </ul>
+                <hr/>
+            `;
+            messageList.appendChild(li);
+        }
+
+        connect();
+    </script>
+</body>
+</html>

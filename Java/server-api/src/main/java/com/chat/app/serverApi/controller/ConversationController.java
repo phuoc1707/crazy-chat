@@ -9,10 +9,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.bridge.Message;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -61,30 +63,32 @@ public class ConversationController {
 //            return  new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
 //        }
 //    }
-@PostMapping("/add")
-public ResponseEntity<ApiResponse<Conversation>> addConversation(@Valid @RequestBody Map<String, Object> payload){
-    try {
-        String name = (String) payload.get("name");
-        List<Map<String, Integer>> membersPayload = (List<Map<String, Integer>>) payload.get("members"); // Có thể đây là vấn đề
-        Long createdByUserId = ((Map<String, Integer>) payload.get("createBy")).get("id").longValue(); // Ép kiểu sang Long
+    @PostMapping("/add")
+    public ResponseEntity<ApiResponse<Conversation>> addConversation(@Valid @RequestBody Map<String, Object> payload){
+        try {
+            System.out.println(payload.toString());
+            String name = (String) payload.get("name");
+            List<Map<String, Integer>> membersPayload = (List<Map<String, Integer>>) payload.get("members"); // Có thể đây là vấn đề
+            Long createdByUserId = ((Map<String, Integer>) payload.get("createBy")).get("id").longValue(); // Ép kiểu sang Long
 
-        if (membersPayload == null || membersPayload.isEmpty()) {
-            return new ResponseEntity<>(ApiResponse.error("Members list cannot be empty.", HttpStatus.BAD_REQUEST.value()), HttpStatus.BAD_REQUEST);
+            if (membersPayload == null || membersPayload.isEmpty()) {
+                return new ResponseEntity<>(ApiResponse.error("Members list cannot be empty.", HttpStatus.BAD_REQUEST.value()), HttpStatus.BAD_REQUEST);
+            }
+
+            Set<Long> userIds = membersPayload.stream()
+                    .map(member -> member.get("id").longValue()) // Ép kiểu sang Long
+                    .collect(Collectors.toSet());
+
+            Conversation conversation=  conversationService.createConversation(name,false,userIds , createdByUserId);
+
+            return  new ResponseEntity<>(ApiResponse.success(conversation), HttpStatus.CREATED);
+        } catch (ClassCastException e) {
+            return new ResponseEntity<>(ApiResponse.error(e.getMessage(), HttpStatus.BAD_REQUEST.value()), HttpStatus.BAD_REQUEST);
+        } catch (Exception exception){
+            ApiResponse<Conversation> errorResponse = ApiResponse.error(exception.getMessage(), HttpStatus.BAD_REQUEST.value());
+            return  new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
-
-        Set<Long> userIds = membersPayload.stream()
-                .map(member -> member.get("id").longValue()) // Ép kiểu sang Long
-                .collect(Collectors.toSet());
-
-        return  new ResponseEntity<>(ApiResponse.success(
-                conversationService.createConversation(name,false,userIds , createdByUserId)), HttpStatus.CREATED);
-    } catch (ClassCastException e) {
-        return new ResponseEntity<>(ApiResponse.error(e.getMessage(), HttpStatus.BAD_REQUEST.value()), HttpStatus.BAD_REQUEST);
-    } catch (Exception exception){
-        ApiResponse<Conversation> errorResponse = ApiResponse.error(exception.getMessage(), HttpStatus.BAD_REQUEST.value());
-        return  new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
-}
 
     @PostMapping("/update")
     public ResponseEntity<ApiResponse<Conversation>> updateConversation(@RequestBody Conversation conversation){
@@ -97,7 +101,7 @@ public ResponseEntity<ApiResponse<Conversation>> addConversation(@Valid @Request
     }
 
     @PostMapping("/delete/{id}")
-    public ResponseEntity<?> updateConversation(@PathVariable Long id){
+    public ResponseEntity<?> deleteConversation(@PathVariable Long id){
         try {
             conversationService.deleteConversation(id);
             return  new ResponseEntity<>(HttpStatus.OK);

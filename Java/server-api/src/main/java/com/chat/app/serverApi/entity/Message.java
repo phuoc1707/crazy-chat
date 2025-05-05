@@ -23,8 +23,8 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "sender", referencedColumnName = "id")
+    @ManyToOne
+    @JoinColumn(name = "sender", referencedColumnName = "id", unique = false)
     private User sender;
 
     @ManyToOne(fetch = FetchType.LAZY)
